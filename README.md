@@ -61,8 +61,8 @@ Node.js requirement `>= 12.17.0`
 - Install dependencies: `npm i`
 - Build: `npm run build`
 - Start the app: `npm start`
+- Go to http://my.awesome.project.url/slack/direct-install to install & setup your team in the db
 
 #### Environment variables
 
 Check out [.env](https://github.com/dgurkaynak/slack-poker-planner/blob/master/.env) file.
-

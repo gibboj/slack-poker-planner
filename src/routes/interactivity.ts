@@ -19,6 +19,8 @@ import uniq from 'lodash/uniq';
 import find from 'lodash/find';
 import * as opentelemetry from '@opentelemetry/api';
 import { Trace, getSpan } from '../lib/trace-decorator';
+import { UserStore } from '../user/user-model';
+import { platformErrorFromResult } from '@slack/web-api/dist/errors';
 
 export class InteractivityRoute {
   /**
@@ -459,7 +461,6 @@ export class InteractivityRoute {
         id: generateId(),
         title,
         points,
-        votes: {},
         state: 'active',
         channelId: privateMetadata.channelId,
         userId: payload.user.id,
@@ -496,6 +497,18 @@ export class InteractivityRoute {
       session.rawPostMessageResponse = postMessageResponse as any;
 
       await SessionStore.upsert(session);
+      const participantTasks = participants.map(async (id: string) => {
+        const user = await UserStore.findById(id);
+        if (!user) {
+          return UserStore.upsert({
+            id,
+            votes: {},
+            points: {},
+          });
+        }
+        return;
+      });
+      await Promise.all(participantTasks);
 
       res.send();
 
@@ -552,13 +565,13 @@ export class InteractivityRoute {
         errorMessage =
           `Poker Planner app is not added to this channel. ` +
           `Please try again after adding it. ` +
-          `You can simply add the app just by mentioning it, like "*@poker_planner*".`;
+          `You can simply add the app just by mentioning it, like "*@super_poker*".`;
       } else if (slackErrorCode == 'channel_not_found') {
         shouldLog = false;
         errorMessage =
           `Oops, we couldn't find this channel. ` +
           `Are you sure that Poker Planner app is added to this channel/conversation? ` +
-          `You can simply add the app by mentioning it, like "*@poker_planner*". ` +
+          `You can simply add the app by mentioning it, like "*@super_poker*". ` +
           `However this may not work in Group DMs, you need to explicitly add it as a ` +
           `member from conversation details menu. Please try again after adding it.`;
       } else if (slackErrorCode == 'token_revoked') {
@@ -720,7 +733,8 @@ export class InteractivityRoute {
         // Unknown error
         default: {
           const errorId = generateId();
-          let errorMessage = `Internal server error, please try again later (error code: ${errorId})\n\n` +
+          let errorMessage =
+            `Internal server error, please try again later (error code: ${errorId})\n\n` +
             `If this problem is persistent, you can open an issue on <${process.env.ISSUES_LINK}>`;
 
           const slackErrorCode = (voteErr as any)?.data?.error;
@@ -819,7 +833,8 @@ export class InteractivityRoute {
 
     if (revealErr) {
       const errorId = generateId();
-      let errorMessage = `Internal server error, please try again later (error code: ${errorId})\n\n` +
+      let errorMessage =
+        `Internal server error, please try again later (error code: ${errorId})\n\n` +
         `If this problem is persistent, you can open an issue on <${process.env.ISSUES_LINK}>`;
 
       const slackErrorCode = (revealErr as any)?.data?.error;
@@ -912,7 +927,8 @@ export class InteractivityRoute {
 
     if (cancelErr) {
       const errorId = generateId();
-      let errorMessage = `Internal server error, please try again later (error code: ${errorId})\n\n` +
+      let errorMessage =
+        `Internal server error, please try again later (error code: ${errorId})\n\n` +
         `If this problem is persistent, you can open an issue on <${process.env.ISSUES_LINK}>`;
 
       const slackErrorCode = (cancelErr as any)?.data?.error;

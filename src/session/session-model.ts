@@ -33,10 +33,7 @@ export interface ISession {
    * List of User IDs resolved from used mentions.
    */
   participants: string[];
-  /**
-   * Votes like { U2147483697: '3', U2147483698: '2' }
-   */
-  votes: { [key: string]: string };
+
   /**
    * Session state.
    */
@@ -71,7 +68,7 @@ export class SessionStore {
     span?.setAttribute('id', id);
     const client = redis.getSingleton();
     const getAsync = promisify(client.get.bind(client));
-    const rawSession = await getAsync(buildRedisKey(id));
+    const rawSession = await getAsync(buildSessionRedisKey(id));
     if (!rawSession) return;
     return JSON.parse(rawSession);
   }
@@ -88,7 +85,7 @@ export class SessionStore {
     const client = redis.getSingleton();
     const setAsync = promisify(client.set.bind(client));
     await setAsync(
-      buildRedisKey(session.id),
+      buildSessionRedisKey(session.id),
       JSON.stringify(session),
       'EX',
       Number(process.env.REDIS_SESSION_TTL)
@@ -106,10 +103,10 @@ export class SessionStore {
     span?.setAttribute('id', id);
     const client = redis.getSingleton();
     const delAsync = promisify(client.del.bind(client));
-    await delAsync(buildRedisKey(id));
+    await delAsync(buildSessionRedisKey(id));
   }
 }
 
-function buildRedisKey(sessionId: string) {
+function buildSessionRedisKey(sessionId: string) {
   return `${process.env.REDIS_NAMESPACE}:session:${sessionId}`;
 }

@@ -8,6 +8,7 @@ import { ITeam } from '../team/team-model';
 import { WebClient } from '@slack/web-api';
 import logger from '../lib/logger';
 import { Trace, getSpan } from '../lib/trace-decorator';
+import { UserController } from '../user/user-controller';
 
 export const DEFAULT_POINTS = [
   '0',
@@ -195,7 +196,7 @@ export class SessionController {
             element: {
               type: 'checkboxes',
               options: [protectedCheckboxesOption, averageCheckboxesOption],
-              initial_options: initialOptions
+              initial_options: initialOptions,
             },
             label: {
               type: 'plain_text',
@@ -264,9 +265,15 @@ export class SessionController {
       throw new Error(SessionControllerErrorCode.ONLY_PARTICIPANTS_CAN_VOTE);
     }
 
-    session.votes[userId] = point;
+    await UserController.vote(session.id, userId, point);
+
+    const votes = await UserController.getAllVotes(
+      session.id,
+      session.participants
+    );
+
     session.state =
-      Object.keys(session.votes).length == session.participants.length
+      Object.keys(votes).length == session.participants.length
         ? 'revealed'
         : 'active';
 
@@ -295,11 +302,13 @@ export class SessionController {
   @Trace()
   static async updateMessage(session: ISession, team: ITeam, userId?: string) {
     const slackWebClient = new WebClient(team.access_token);
-
+    const votes =
+      (await UserController.getAllVotes(session.id, session.participants)) ||
+      {};
     if (session.state == 'revealed') {
       const voteGroups = groupBy(
         session.participants,
-        (userId) => session.votes[userId] || 'not-voted'
+        (userId) => votes[userId] || 'not-voted'
       );
       const votesText = Object.keys(voteGroups)
         .sort((a, b) => session.points.indexOf(a) - session.points.indexOf(b))
@@ -320,10 +329,12 @@ export class SessionController {
         })
         .join('\n');
 
-      let averageText = "";
+      let averageText = '';
       if (session.average) {
-        const average = SessionController.getAverage(session.votes);
-        averageText = average ? `\nAverage: ${SessionController.getAverage(session.votes)}` : "";
+        const average = SessionController.getAverage(votes);
+        averageText = average
+          ? `\nAverage: ${SessionController.getAverage(votes)}`
+          : '';
       }
 
       await slackWebClient.chat.update({
@@ -345,7 +356,7 @@ export class SessionController {
       });
     } else {
       const votesText = map(session.participants.sort(), (userId) => {
-        if (session.votes.hasOwnProperty(userId)) {
+        if (votes.hasOwnProperty(userId)) {
           return `<@${userId}>: :white_check_mark:`;
         }
 
@@ -365,9 +376,13 @@ export class SessionController {
    * For given votes, calculate average point
    */
   static getAverage(votes: { [key: string]: string }): string | boolean {
-    const numericPoints = Object.values(votes).filter(SessionController.isNumeric).map(parseFloat);
+    const numericPoints = Object.values(votes)
+      .filter(SessionController.isNumeric)
+      .map(parseFloat);
     if (numericPoints.length < 1) return false;
-    return (numericPoints.reduce((a, b) => a + b) / numericPoints.length).toFixed(1);
+    return (
+      numericPoints.reduce((a, b) => a + b) / numericPoints.length
+    ).toFixed(1);
   }
 
   static isNumeric(n: any) {
