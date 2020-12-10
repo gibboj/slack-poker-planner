@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dgurkaynak/slack-poker-planner.git"
+    "url": "git+https://github.com/gibboj/slack-poker-planner.git"
   },
   "keywords": [
     "slack",
@@ -23,9 +23,9 @@
   "author": "Deniz Gurkaynak <dgurkaynak@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/dgurkaynak/slack-poker-planner/issues"
+    "url": "https://github.com/gibboj/slack-poker-planner/issues"
   },
-  "homepage": "https://github.com/dgurkaynak/slack-poker-planner#readme",
+  "homepage": "https://github.com/gibboj/slack-poker-planner#readme",
   "engines": {
     "node": ">=12.17.0"
   },
@@ -60,7 +60,7 @@
     "ts-loader": "^7.0.5",
     "typescript": "^3.9.3",
     "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.11",
+    "webpack-cli": "^3.3.12",
     "webpack-node-externals": "^1.7.2"
   }
 }
